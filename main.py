@@ -1,17 +1,23 @@
-'''
-self.status = {
-            "headlight": 0,
-            "ac" : [0, 24, 0], # power, temperature, speed
-            "joints": [0.0,0.0,0.0],
-            "depth" : 0.0
-        }
-'''
+import time
+from src import SharedMemory, TCPCommunicator, LLMProcessor
+from src.TextInputThread import TextInputThread
 
-from src.SharedMemory import *
+if __name__ == "__main__":
+    shm = SharedMemory()
 
-shm = SharedMemory()
+    tcp   = TCPCommunicator(shm)
+    llm   = LLMProcessor(shm)
+    text  = TextInputThread(shm)
 
-shm.set_value("headlight", 3)
-shm.set_value("ac", [1, 21, 3])
-print(shm.get_value("depth"))
-print(shm.get_all())
+    tcp.start()
+    llm.start()
+    text.start()
+
+    try:
+        while shm.is_running:
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("\n종료 중...")
+    finally:
+        tcp.stop()
+        llm.stop()

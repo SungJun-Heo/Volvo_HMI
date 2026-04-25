@@ -1,6 +1,7 @@
 import socket
 import threading
 import time
+from .constants import AC_IDX_POWER, AC_IDX_TEMP, AC_IDX_SPEED, AC_IDX_MODE, AC_IDX_SWING
 
 
 class TCPCommunicator(threading.Thread):
@@ -50,9 +51,9 @@ class TCPCommunicator(threading.Thread):
 
                 current_ac = status.get("ac")
                 if current_ac != self.last_ac and current_ac is not None:
-                    power, temp, speed = current_ac
-                    pwm_val = int(speed) * 63
-                    cmd = f"{power},{temp},{pwm_val}\n"
+                    pwm_val = int(current_ac[AC_IDX_SPEED]) * 63
+                    cmd = (f"{current_ac[AC_IDX_POWER]},{current_ac[AC_IDX_TEMP]},"
+                           f"{pwm_val},{current_ac[AC_IDX_MODE]},{current_ac[AC_IDX_SWING]}\n")
                     self.sock.sendall(cmd.encode())
                     self.last_ac = current_ac.copy()
 
