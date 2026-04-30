@@ -18,6 +18,7 @@ if __name__ == "__main__":
             time.sleep(0.5)
     except KeyboardInterrupt:
         print("\n종료 중...")
+        print(f"shm값: {shm.get_all()}")
     finally:
         tcp.stop()
         llm.stop()

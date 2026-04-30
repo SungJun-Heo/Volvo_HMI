@@ -1,3 +1,4 @@
+import os
 import threading
 import json
 import csv
@@ -32,9 +33,9 @@ class LLMProcessor(threading.Thread):
 
 [CRITICAL RULES]
 1. AC COMMANDS: If the user wants to control the air conditioner, YOU MUST use the AC Control tools.
-2. LIGHT COMMANDS: If the user wants to turn on/off ANY light, YOU MUST use the set_light tool.
+2. LIGHT COMMANDS: If the user wants to turn on/off ANY light (e.g., "headlight", "LED", "rear light", "조명", "전조등", "후방등"), YOU MUST use the set_light tool.
 3. WEATHER COMMANDS: If the user asks for the weather forecast, YOU MUST use the get_weather tool.
-4. OUT OF DOMAIN: For ALL other questions, YOU MUST NOT call any tools. Reply EXACTLY with:
+4. OUT OF DOMAIN (NO TOOLS!): For ALL other questions, greetings, or irrelevant topics, YOU MUST NOT call any tools. You must bypass tools and reply EXACTLY with:
    "I apologize, but I can only provide information related to excavator control and weather information."
 
 Extra Rules:
@@ -96,16 +97,6 @@ Extra Rules:
             },
         }},
         {"type": "function", "function": {
-            "name": "set_light",
-            "description": "Turn the excavator light on or off.",
-            "parameters": {
-                "type": "object",
-                "properties": {"state": {"type": "string", "enum": ["on", "off"]}},
-                "required": ["state"],
-                "additionalProperties": False,
-            },
-        }},
-        {"type": "function", "function": {
             "name": "get_weather",
             "description": "Get weather information.",
             "parameters": {
@@ -118,11 +109,22 @@ Extra Rules:
                 "required": ["date"],
             },
         }},
+        {"type": "function", "function": {
+            "name": "set_light",
+            "description": "Turn the excavator's light (headlight, LED, rear light) on or off.",
+            "parameters": {
+                "type": "object",
+                "properties": {"state": {"type": "string", "enum": ["on", "off"]}},
+                "required": ["state"],
+                "additionalProperties": False,
+            },
+        }},
     ]
 
     # ── 생명주기 ──────────────────────────────────────────────────────────────
 
-    def __init__(self, shm, base_url="http://bore.pub:57685/v1", model="llama3.1:8b"):
+    def __init__(self, shm, base_url=None, model="llama3.1:8b"):
+        base_url = base_url or os.getenv("LLM_BASE_URL", "http://bore.pub:59831/v1")
         super().__init__(daemon=True)
         self.shm = shm
         self.model = model
@@ -131,7 +133,25 @@ Extra Rules:
         self.session_id = str(uuid.uuid4())
         self._LOG_DIR.mkdir(parents=True, exist_ok=True)
 
+    def _ping(self) -> bool:
+        try:
+            print("[LLM] 서버 연결 확인 중...")
+            self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": "ping"}],
+                max_tokens=1,
+                temperature=0,
+            )
+            print("[LLM] 서버 연결 성공")
+            return True
+        except Exception as e:
+            print(f"[LLM] 서버 연결 실패: {e}")
+            return False
+
     def run(self):
+        if not self._ping():
+            self.shm.is_running = False
+            return
         while self.shm.is_running:
             self.shm.command_event.wait()
             text = self.shm.last_command
@@ -161,6 +181,7 @@ Extra Rules:
         }
 
         try:
+            print(f"[LLM →] \"{text}\"")
             resp = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -169,6 +190,8 @@ Extra Rules:
                 temperature=0.2,
             )
             msg = resp.choices[0].message
+            tool_names = [tc.function.name for tc in (msg.tool_calls or [])]
+            print(f"[LLM ←] tool_calls={tool_names if tool_names else 'none'}")
 
             if not getattr(msg, "tool_calls", None):
                 reply = (msg.content or "요청을 이해했어요.").strip()
@@ -199,24 +222,30 @@ Extra Rules:
                         continue
 
                     # SharedMemory 업데이트
-                    ac = self.shm.get_value("ac")
-                    if name == "power_on":
-                        ac[0] = AC_POWER_ON
-                    elif name == "power_off":
-                        ac[0] = AC_POWER_OFF
-                    elif name == "set_temperature":
-                        ac[1] = int(float(args["temp_c"]))
-                    elif name == "set_fan_speed":
-                        ac[2] = AC_SPEED.get(args["level"], 0)
-                    elif name == "set_mode":
-                        ac[3] = AC_MODE.get(args["mode"], 0)
-                    elif name == "set_swing":
-                        ac[4] = AC_SWING_ON if args["state"] == "on" else AC_SWING_OFF
-                    elif name == "set_light":
-                        self.shm.set_value("headlight", 1 if args["state"] == "on" else 0)
+                    try:
+                        ac = self.shm.get_value("ac")
+                        if name == "power_on":
+                            ac[0] = AC_POWER_ON
+                        elif name == "power_off":
+                            ac[0] = AC_POWER_OFF
+                        elif name == "set_temperature":
+                            ac[1] = int(float(args["temp_c"]))
+                        elif name == "set_fan_speed":
+                            ac[2] = AC_SPEED.get(args["level"], 0)
+                        elif name == "set_mode":
+                            ac[3] = AC_MODE.get(args["mode"], 0)
+                        elif name == "set_swing":
+                            ac[4] = AC_SWING_ON if args["state"] == "on" else AC_SWING_OFF
+                        elif name == "set_light":
+                            self.shm.set_value("headlight", 1 if args["state"] == "on" else 0)
 
-                    if name != "set_light":
-                        self.shm.set_value("ac", ac)
+                        if name != "set_light":
+                            self.shm.set_value("ac", ac)
+                    except Exception as e:
+                        print(f"[LLMProcessor] SharedMemory 업데이트 실패 ({name}): {e}")
+                        reply = "장비 제어 중 오류가 발생했어요."
+                        self.chat_memory.append({"role": "assistant", "content": reply})
+                        return reply
 
                     confirmations.append(self._confirmation_text(name, args))
 

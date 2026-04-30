@@ -36,6 +36,7 @@ class DummyArduino:
             t3 = round(t3 + random.uniform(-0.5, 0.5), 2)
             try:
                 self._conn.sendall(f"{t1},{t2},{t3}\n".encode())
+                print(f"[DummyArduino] 관절 데이터 전송: t1={t1} t2={t2} t3={t3}")
             except Exception:
                 break
             time.sleep(0.1)

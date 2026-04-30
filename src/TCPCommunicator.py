@@ -5,7 +5,7 @@ from .constants import AC_IDX_POWER, AC_IDX_TEMP, AC_IDX_SPEED, AC_IDX_MODE, AC_
 
 
 class TCPCommunicator(threading.Thread):
-    def __init__(self, shm, ip="10.211.125.127", port=8888):
+    def __init__(self, shm, ip="127.0.0.1", port=8888):
         super().__init__(daemon=True)
         self.shm = shm
         self.ip = ip
