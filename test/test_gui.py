@@ -25,9 +25,7 @@ def simulate_joints(shm: SharedMemory):
         j0 = 40.0 + 20.0 * math.sin(t * 0.3)
         j1 = -75.0 + 15.0 * math.sin(t * 0.5 + 1.0)
         j2 = -25.0 + 10.0 * math.sin(t * 0.7 + 2.0)
-        depth = max(0.0, abs(j1) * 0.025)
         shm.set_value("joints", [j0, j1, j2])
-        shm.set_value("depth", round(depth, 2))
         t += 0.1
         time.sleep(0.1)
 

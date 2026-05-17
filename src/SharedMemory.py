@@ -13,7 +13,7 @@ class SharedMemory:
             "headlight": 0,
             "ac": [0, 24, 0, 0, 0],  # power, temp, speed, mode, swing
             "joints": [0.0, 0.0, 0.0],
-            "depth": 0.0
+            "depth": None
         }
         # GUI state
         self.llm_processing = False

@@ -41,10 +41,11 @@ class ExcavatorView(QWidget):
         super().__init__(parent)
         self._joints = [45.0, -80.0, -30.0]
         self._depth  = 0.0
-        self.setMinimumSize(280, 260)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.setMinimumSize(280, 160)
+        self.setMaximumHeight(180)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-    def set_data(self, joints: list, depth: float):
+    def set_data(self, joints: list, depth):
         self._joints = joints[:3] if len(joints) >= 3 else [45.0, -80.0, -30.0]
         self._depth  = depth
         self.update()
@@ -115,8 +116,24 @@ class ExcavatorView(QWidget):
         for jx, jy in [(px, py), (bx, by), (sx, sy)]:
             p.drawEllipse(int(jx) - 5, int(jy) - 5, 10, 10)
 
+        # Joint angle labels
+        p.setFont(QFont("Monospace", 8))
+        fm = p.fontMetrics()
+        for (jx, jy), angle, name in [
+            (( px,  py), self._joints[0], "J1"),
+            (( bx,  by), self._joints[1], "J2"),
+            (( sx,  sy), self._joints[2], "J3"),
+        ]:
+            text = f"{name} {angle:.1f}°"
+            tx, ty = int(jx) + 8, int(jy) - 4
+            br = fm.boundingRect(text)
+            p.fillRect(tx + br.x() - 2, ty + br.y() - 1, br.width() + 4, br.height() + 2,
+                       QColor("#000000"))
+            p.setPen(QColor(C["text"]))
+            p.drawText(tx, ty, text)
+
         # Depth line + label
-        if ey < gy:
+        if self._depth is not None and ey < gy:
             p.setPen(QPen(QColor(C["blue"]), 1, Qt.PenStyle.DotLine))
             p.drawLine(int(ex), int(ey), int(ex), gy)
             p.setPen(QColor(C["blue"]))
@@ -150,9 +167,9 @@ class MonitorPanel(QGroupBox):
             ("depth", "깊이"),
         ]):
             ql = QLabel(label)
-            ql.setStyleSheet(f"color:{C['muted']};font-size:11px;")
+            ql.setStyleSheet(f"color:{C['muted']};font-size:13px;")
             qv = QLabel("---")
-            qv.setStyleSheet(f"color:{C['yellow']};font-size:12px;font-weight:bold;")
+            qv.setStyleSheet(f"color:{C['yellow']};font-size:14px;font-weight:bold;")
             qv.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             grid.addWidget(ql, row, 0)
             grid.addWidget(qv, row, 1)
@@ -161,13 +178,13 @@ class MonitorPanel(QGroupBox):
         layout.addLayout(grid)
         self.setLayout(layout)
 
-    def update_data(self, joints: list, depth: float):
+    def update_data(self, joints: list, depth):
         self._view.set_data(joints, depth)
         j = joints if len(joints) >= 3 else [0.0, 0.0, 0.0]
         self._lbl["j0"].setText(f"{j[0]:.1f}°")
         self._lbl["j1"].setText(f"{j[1]:.1f}°")
         self._lbl["j2"].setText(f"{j[2]:.1f}°")
-        self._lbl["depth"].setText(f"{depth:.2f} m")
+        self._lbl["depth"].setText(f"{depth:.2f} m" if depth is not None else "---")
 
 
 # ── STT + LLM status panel ────────────────────────────────────────────────────
@@ -328,10 +345,12 @@ class ACPanel(QGroupBox):
         self._mode_btns  = []
         self._speed_btns = []
 
-        layout = QGridLayout()
-        layout.setSpacing(8)
+        LABEL_W = 38
 
-        # ── Row 0: Power + Temperature ────────────────────────────────────────
+        outer = QVBoxLayout()
+        outer.setSpacing(8)
+
+        # ── Row 0: Power ──────────────────────────────────────────────────────
         self._pwr_dot = QLabel("●")
         self._pwr_dot.setStyleSheet(f"color:{C['muted']};font-size:20px;")
         self._pwr_lbl = QLabel("OFF")
@@ -342,55 +361,80 @@ class ACPanel(QGroupBox):
         for btn in (self._off_btn, self._on_btn):
             btn.setFixedHeight(36)
 
+        self._off_btn.clicked.connect(lambda: self._set_power(False))
+        self._on_btn.clicked.connect(lambda: self._set_power(True))
+
+        pwr_status = QWidget()
+        pwr_layout = QHBoxLayout(pwr_status)
+        pwr_layout.setContentsMargins(0, 0, 0, 0)
+        pwr_layout.setSpacing(4)
+        pwr_layout.addWidget(self._pwr_dot)
+        pwr_layout.addWidget(self._pwr_lbl)
+
+        row0 = QHBoxLayout()
+        row0.setSpacing(8)
+        row0.addWidget(pwr_status)
+        row0.addWidget(self._off_btn, stretch=1)
+        row0.addWidget(self._on_btn,  stretch=1)
+        outer.addLayout(row0)
+
+        # ── Row 1: Temperature ────────────────────────────────────────────────
         self._temp_minus   = QPushButton("−")
         self._temp_plus    = QPushButton("+")
         self._temp_display = QLabel("24°C")
         self._temp_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._temp_display.setStyleSheet(
-            f"color:{C['yellow']};font-size:22px;font-weight:bold;min-width:70px;")
+            f"color:{C['yellow']};font-size:22px;font-weight:bold;")
 
         for btn in (self._temp_minus, self._temp_plus):
-            btn.setFixedSize(36, 36)
+            btn.setFixedHeight(32)
 
-        self._off_btn.clicked.connect(lambda: self._set_power(False))
-        self._on_btn.clicked.connect(lambda: self._set_power(True))
         self._temp_minus.clicked.connect(lambda: self._change_temp(-1))
         self._temp_plus.clicked.connect(lambda: self._change_temp(+1))
 
-        row0 = QHBoxLayout()
-        row0.setSpacing(8)
-        row0.addWidget(self._pwr_dot)
-        row0.addWidget(self._pwr_lbl)
-        row0.addStretch()
-        row0.addWidget(self._off_btn)
-        row0.addWidget(self._on_btn)
-        row0.addSpacing(20)
-        row0.addWidget(self._temp_minus)
-        row0.addWidget(self._temp_display)
-        row0.addWidget(self._temp_plus)
-        layout.addLayout(row0, 0, 0, 1, -1)
+        lbl1 = self._muted_lbl("온도:"); lbl1.setFixedWidth(LABEL_W)
+        row1 = QHBoxLayout()
+        row1.setSpacing(8)
+        row1.addWidget(lbl1)
+        row1.addWidget(self._temp_minus,   stretch=1)
+        row1.addWidget(self._temp_display, stretch=2)
+        row1.addWidget(self._temp_plus,    stretch=1)
+        outer.addLayout(row1)
 
-        # ── Row 1: Mode ───────────────────────────────────────────────────────
-        layout.addWidget(self._muted_lbl("모드:"), 1, 0)
-        for col, (label, key) in enumerate(zip(self._MODE_LABELS, self._MODE_KEYS), start=1):
+        # ── Row 2: Mode ───────────────────────────────────────────────────────
+        lbl2 = self._muted_lbl("모드:"); lbl2.setFixedWidth(LABEL_W)
+        row2 = QHBoxLayout()
+        row2.setSpacing(8)
+        row2.addWidget(lbl2)
+        for label, key in zip(self._MODE_LABELS, self._MODE_KEYS):
             btn = self._toggle_btn(label, lambda _, k=key: self._set_mode(k))
             self._mode_btns.append(btn)
-            layout.addWidget(btn, 1, col)
+            row2.addWidget(btn, stretch=1)
+        outer.addLayout(row2)
 
-        # ── Row 2: Fan speed + Swing ──────────────────────────────────────────
-        layout.addWidget(self._muted_lbl("풍속:"), 2, 0)
-        for col, (label, key) in enumerate(zip(self._SPEED_LABELS, self._SPEED_KEYS), start=1):
+        # ── Row 3: Fan speed ──────────────────────────────────────────────────
+        lbl3 = self._muted_lbl("풍속:"); lbl3.setFixedWidth(LABEL_W)
+        row3 = QHBoxLayout()
+        row3.setSpacing(8)
+        row3.addWidget(lbl3)
+        for label, key in zip(self._SPEED_LABELS, self._SPEED_KEYS):
             btn = self._toggle_btn(label, lambda _, k=key: self._set_speed(k))
             self._speed_btns.append(btn)
-            layout.addWidget(btn, 2, col)
+            row3.addWidget(btn, stretch=1)
+        outer.addLayout(row3)
 
-        layout.addWidget(self._muted_lbl("스윙:"), 2, 5)
+        # ── Row 4: Swing ──────────────────────────────────────────────────────
+        lbl4 = self._muted_lbl("스윙:"); lbl4.setFixedWidth(LABEL_W)
         self._swing_off = self._toggle_btn("OFF", lambda: self._set_swing("off"))
         self._swing_on  = self._toggle_btn("ON",  lambda: self._set_swing("on"))
-        layout.addWidget(self._swing_off, 2, 6)
-        layout.addWidget(self._swing_on,  2, 7)
+        row4 = QHBoxLayout()
+        row4.setSpacing(8)
+        row4.addWidget(lbl4)
+        row4.addWidget(self._swing_off, stretch=1)
+        row4.addWidget(self._swing_on,  stretch=1)
+        outer.addLayout(row4)
 
-        self.setLayout(layout)
+        self.setLayout(outer)
         self._refresh()
 
     # ── helpers ───────────────────────────────────────────────────────────────
@@ -544,23 +588,21 @@ class MainWindow(QMainWindow):
         top.setSpacing(10)
 
         self._monitor = MonitorPanel()
-        self._monitor.setMaximumWidth(330)
+        self._monitor.setMaximumWidth(400)
         top.addWidget(self._monitor)
 
         right = QVBoxLayout()
         right.setSpacing(10)
-        self._stt_panel = STTPanel(shm)
-        right.addWidget(self._stt_panel)
+        self._ac_panel = ACPanel(shm)
+        right.addWidget(self._ac_panel)
         self._hl_panel = HeadlightPanel(shm)
         right.addWidget(self._hl_panel)
+        self._stt_panel = STTPanel(shm)
+        right.addWidget(self._stt_panel)
         right.addStretch()
         top.addLayout(right)
 
         root.addLayout(top)
-
-        # Bottom: AC control
-        self._ac_panel = ACPanel(shm)
-        root.addWidget(self._ac_panel)
 
         # 100 ms poll timer for monitor + headlight + AC sync
         self._timer = QTimer()
