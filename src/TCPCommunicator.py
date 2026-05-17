@@ -1,7 +1,6 @@
 import socket
 import threading
 import time
-from .constants import AC_IDX_POWER, AC_IDX_TEMP, AC_IDX_SPEED, AC_IDX_MODE, AC_IDX_SWING
 
 
 class TCPCommunicator(threading.Thread):
@@ -41,21 +40,17 @@ class TCPCommunicator(threading.Thread):
     def _tx_loop(self):
         while self.shm.is_running:
             try:
-                status = self.shm.get_all()
+                headlight = self.shm.get_headlight()
+                if headlight != self.last_headlight:
+                    self.sock.sendall(f"{headlight}\n".encode())
+                    self.last_headlight = headlight
 
-                current_headlight = status.get("headlight")
-                if current_headlight != self.last_headlight and current_headlight is not None:
-                    cmd = f"{current_headlight}\n"
+                ac = self.shm.get_ac_state()
+                if ac != self.last_ac:
+                    pwm_val = int(ac["speed"]) * 63
+                    cmd = f"{ac['power']},{ac['temp']},{pwm_val},{ac['mode']},{ac['swing']}\n"
                     self.sock.sendall(cmd.encode())
-                    self.last_headlight = current_headlight
-
-                current_ac = status.get("ac")
-                if current_ac != self.last_ac and current_ac is not None:
-                    pwm_val = int(current_ac[AC_IDX_SPEED]) * 63
-                    cmd = (f"{current_ac[AC_IDX_POWER]},{current_ac[AC_IDX_TEMP]},"
-                           f"{pwm_val},{current_ac[AC_IDX_MODE]},{current_ac[AC_IDX_SWING]}\n")
-                    self.sock.sendall(cmd.encode())
-                    self.last_ac = current_ac.copy()
+                    self.last_ac = ac
 
             except Exception:
                 break

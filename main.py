@@ -1,16 +1,18 @@
 import time
-from src import SharedMemory, TCPCommunicator, LLMProcessor
+from src import SharedMemory, TCPCommunicator, LLMProcessor, OutputProcessor
 from src.TextInputThread import TextInputThread
 
 if __name__ == "__main__":
     shm = SharedMemory()
 
-    tcp   = TCPCommunicator(shm)
-    llm   = LLMProcessor(shm)
-    text  = TextInputThread(shm)
+    tcp    = TCPCommunicator(shm)
+    llm    = LLMProcessor(shm)
+    output = OutputProcessor(shm)
+    text   = TextInputThread(shm)
 
     tcp.start()
     llm.start()
+    output.start()
     text.start()
 
     try:
@@ -22,3 +24,4 @@ if __name__ == "__main__":
     finally:
         tcp.stop()
         llm.stop()
+        output.stop()

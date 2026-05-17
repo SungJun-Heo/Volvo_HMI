@@ -12,7 +12,7 @@ class TextInputThread(threading.Thread):
             try:
                 text = input("> ").strip()
                 if text:
-                    self.shm.last_command = text
+                    self.shm.llm_input = text
                     self.shm.command_event.set()
             except EOFError:
                 break
