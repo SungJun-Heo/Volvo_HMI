@@ -15,6 +15,10 @@ class SharedMemory:
             "joints": [0.0, 0.0, 0.0],
             "depth": 0.0
         }
+        # GUI state
+        self.llm_processing = False
+        self.stt_active = False
+        self.stt_trigger = threading.Event()
 
     # ── 범용 접근 ──────────────────────────────────────────────────────────────
 

@@ -27,8 +27,10 @@ class LLMProcessor(threading.Thread):
             text = self.shm.llm_input
             self.shm.command_event.clear()
             if text:
+                self.shm.llm_processing = True
                 output = self._call_llm(text)
                 self.shm.llm_output = output
+                self.shm.llm_processing = False
 
     def stop(self):
         self.shm.is_running = False

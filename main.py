@@ -1,6 +1,7 @@
-import time
+import sys
 from src import SharedMemory, TCPCommunicator, LLMProcessor, OutputProcessor
-from src.TextInputThread import TextInputThread
+from src.STTProcessor import STTProcessor
+from src.GUIApp import launch_gui
 
 if __name__ == "__main__":
     shm = SharedMemory()
@@ -8,20 +9,12 @@ if __name__ == "__main__":
     tcp    = TCPCommunicator(shm)
     llm    = LLMProcessor(shm)
     output = OutputProcessor(shm)
-    text   = TextInputThread(shm)
+    stt    = STTProcessor(shm)
 
     tcp.start()
     llm.start()
     output.start()
-    text.start()
+    stt.start()
 
-    try:
-        while shm.is_running:
-            time.sleep(0.5)
-    except KeyboardInterrupt:
-        print("\n종료 중...")
-        print(f"shm값: {shm.get_all()}")
-    finally:
-        tcp.stop()
-        llm.stop()
-        output.stop()
+    # GUI runs on the main thread (PyQt6 requirement)
+    sys.exit(launch_gui(shm))
