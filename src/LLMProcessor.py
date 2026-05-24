@@ -62,6 +62,14 @@ class LLMProcessor(threading.Thread):
                 messages=messages,
                 tools=TOOLS,
                 tool_choice="auto",
+                temperature=0.3,
+                top_p=0.1,
+                extra_body={
+                    "options": {
+                        "repeat_penalty": 1.15,
+                        "num_ctx": 2048,
+                    }
+                },
             )
             msg = resp.choices[0].message
 
