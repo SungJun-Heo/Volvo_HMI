@@ -10,11 +10,11 @@ load_dotenv()
 
 class LLMProcessor(threading.Thread):
 
-    def __init__(self, shm, base_url=None, model="llama3.1:8b"):
+    def __init__(self, shm, base_url=None, model="volvo_qwen"):
         super().__init__(daemon=True)
         self.shm = shm
         self.model = model
-        base_url = base_url or os.getenv("LLM_BASE_URL", "http://bore.pub:59831/v1")
+        base_url = base_url or os.getenv("LLM_BASE_URL", "http://127.0.0.1:11434/v1")
         self.client = OpenAI(base_url=base_url, api_key="ollama")
         self.chat_memory = []
 
@@ -43,7 +43,6 @@ class LLMProcessor(threading.Thread):
                 model=self.model,
                 messages=[{"role": "user", "content": "ping"}],
                 max_tokens=1,
-                temperature=0,
             )
             print("[LLM] 서버 연결 성공")
             return True
@@ -62,7 +61,6 @@ class LLMProcessor(threading.Thread):
                 messages=messages,
                 tools=TOOLS,
                 tool_choice="auto",
-                temperature=0.2,
             )
             msg = resp.choices[0].message
 

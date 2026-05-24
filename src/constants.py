@@ -11,7 +11,7 @@ CSV_PATH   = LOG_DIR / "llm_log.csv"
 CSV_HEADERS = ["timestamp", "session_id", "user_text", "reply", "tool_calls", "ok"]
 
 # ── LLM ───────────────────────────────────────────────────────────────────────
-MAX_MEMORY = 10
+MAX_MEMORY = 3
 
 # ac = [power, temp, speed, mode, swing]
 AC_IDX_POWER = 0
@@ -73,7 +73,7 @@ TOOLS = [
     }},
     {"type": "function", "function": {
         "name": "set_temperature",
-        "description": "Set target temperature in Celsius (16–30).",
+        "description": "Set target temperature in Celsius (16–30). (필수 규칙: '덥다' → 18도, '춥다' → 26도, '조금/약간' → 1~2도 조절)",
         "parameters": {
             "type": "object",
             "properties": {"temp_c": {"type": "number", "minimum": 16, "maximum": 30}},
@@ -83,7 +83,7 @@ TOOLS = [
     }},
     {"type": "function", "function": {
         "name": "set_fan_speed",
-        "description": "Set fan speed.",
+        "description": "Set fan speed. (키워드: 약하게/조용히=low, 중간=medium, 강하게/세게=high, 자동=auto)",
         "parameters": {
             "type": "object",
             "properties": {"level": {"type": "string", "enum": ["low", "medium", "high", "auto"]}},
