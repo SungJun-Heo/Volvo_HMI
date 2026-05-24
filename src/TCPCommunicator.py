@@ -4,7 +4,7 @@ import time
 
 
 class TCPCommunicator(threading.Thread):
-    def __init__(self, shm, ip="127.0.0.1", port=8888):
+    def __init__(self, shm, ip="10.231.238.127", port=8888):
         super().__init__(daemon=True)
         self.shm = shm
         self.ip = ip
@@ -32,7 +32,11 @@ class TCPCommunicator(threading.Thread):
                 if not line:
                     break
                 parts = line.strip().split(",")
-                self.shm.set_value("joints", list(map(float, parts[:3])))
+                if len(parts) >= 4:
+                    self.shm.set_value("joints", list(map(float, parts[:3])))
+                    self.shm.set_value("depth", float(parts[3]))
+                elif len(parts) == 3:
+                    self.shm.set_value("joints", list(map(float, parts[:3])))
             except Exception:
                 pass
         self.stop()
