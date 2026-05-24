@@ -1,13 +1,13 @@
 import math
 import sys
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QGroupBox, QSizePolicy,
 )
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QFont
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont
 
 from .constants import AC_MODE, AC_SPEED
 
@@ -43,7 +43,7 @@ class ExcavatorView(QWidget):
         self._depth  = 0.0
         self.setMinimumSize(280, 160)
         self.setMaximumHeight(180)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
     def set_data(self, joints: list, depth):
         self._joints = joints[:3] if len(joints) >= 3 else [45.0, -80.0, -30.0]
@@ -52,14 +52,14 @@ class ExcavatorView(QWidget):
 
     def paintEvent(self, event):
         p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.Antialiasing)
         w, h = self.width(), self.height()
 
         p.fillRect(0, 0, w, h, QColor(C["bg"]))
 
         # Ground line
         gy = h - 28
-        p.setPen(QPen(QColor(C["muted"]), 1, Qt.PenStyle.DashLine))
+        p.setPen(QPen(QColor(C["muted"]), 1, Qt.DashLine))
         p.drawLine(0, gy, w, gy)
 
         cx, cy = int(w * 0.38), gy - 28   # body pivot
@@ -77,7 +77,7 @@ class ExcavatorView(QWidget):
         p.setBrush(QBrush(QColor(C["yellow"])))
         p.drawRoundedRect(cx - 38, cy - 22, 76, 36, 6, 6)
         # Cab window
-        p.setPen(Qt.PenStyle.NoPen)
+        p.setPen(Qt.NoPen)
         p.setBrush(QBrush(QColor("#1a1a2e")))
         p.drawRoundedRect(cx + 2, cy - 17, 26, 20, 3, 3)
 
@@ -94,7 +94,7 @@ class ExcavatorView(QWidget):
         ex = sx + self.BUCKET_LEN* math.cos(a2);  ey = sy - self.BUCKET_LEN* math.sin(a2)
 
         # Boom
-        pen = QPen(QColor(C["yellow"]), 10, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        pen = QPen(QColor(C["yellow"]), 10, Qt.SolidLine, Qt.RoundCap)
         p.setPen(pen)
         p.drawLine(int(px), int(py), int(bx), int(by))
         # Stick
@@ -170,7 +170,7 @@ class MonitorPanel(QGroupBox):
             ql.setStyleSheet(f"color:{C['muted']};font-size:13px;")
             qv = QLabel("---")
             qv.setStyleSheet(f"color:{C['yellow']};font-size:14px;font-weight:bold;")
-            qv.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            qv.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             grid.addWidget(ql, row, 0)
             grid.addWidget(qv, row, 1)
             self._lbl[key] = qv
@@ -204,7 +204,7 @@ class STTPanel(QGroupBox):
         self._stt_lbl = QLabel("대기 중...")
         self._stt_lbl.setWordWrap(True)
         self._stt_lbl.setMinimumHeight(52)
-        self._stt_lbl.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self._stt_lbl.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self._stt_lbl.setStyleSheet(f"""
             QLabel {{
                 background-color: {C['panel']};
@@ -226,7 +226,7 @@ class STTPanel(QGroupBox):
 
         # LLM processing label
         self._llm_lbl = QLabel("")
-        self._llm_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._llm_lbl.setAlignment(Qt.AlignCenter)
         self._llm_lbl.setFixedHeight(22)
         self._llm_lbl.setStyleSheet(f"color:{C['orange']};font-size:12px;font-weight:bold;")
         layout.addWidget(self._llm_lbl)
@@ -382,7 +382,7 @@ class ACPanel(QGroupBox):
         self._temp_minus   = QPushButton("−")
         self._temp_plus    = QPushButton("+")
         self._temp_display = QLabel("24°C")
-        self._temp_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._temp_display.setAlignment(Qt.AlignCenter)
         self._temp_display.setStyleSheet(
             f"color:{C['yellow']};font-size:22px;font-weight:bold;")
 
