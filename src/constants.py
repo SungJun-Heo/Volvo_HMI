@@ -39,14 +39,6 @@ AC_MODE = {
 
 AC_SWING = {"on": 1, "off": 0}
 
-SYSTEM_PROMPT = """당신은 굴착기 캐빈 내부의 조종사를 돕는 AI 비서입니다.
-
-[절대 규칙]
-1. 언어: 반드시 '한국어'로만 답변하세요. 중국어(한자)나 영어는 절대 사용하지 마세요.
-2. 도구 사용: 사용자가 에어컨, 조명, 날씨를 제어하거나 '상태'를 물어볼 때 반드시 관련 도구를 호출하세요.
-3. 간결함: 장황하게 설명하지 말고, "네, 에어컨을 켰습니다." 또는 "현재 조명은 켜져 있습니다."처럼 1~2문장으로 짧고 명확하게 대답하세요.
-4. 그 외 질문: 인사나 농담에는 도구를 쓰지 말고 "저는 굴착기 제어와 날씨 정보만 제공할 수 있습니다."라고 답하세요.
-"""
 
 TOOLS = [
     {"type": "function", "function": {
@@ -120,6 +112,16 @@ TOOLS = [
             "properties": {"state": {"type": "string", "enum": ["on", "off"]}},
             "required": ["state"],
             "additionalProperties": False,
+        },
+    }},
+    # 신기능
+    {"type": "function", "function": {
+        "name": "get_arm_status",
+        "description": "굴착기의 암 관절 각도(joints)와 버켓의 지면 기준 높이/깊이(depth)를 확인합니다. 사용자가 암 각도, 버켓 위치를 묻거나 신기능(버켓 위치 안내 등)에 대해 물어볼 때 이 도구를 호출하세요.",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False
         },
     }},
 ]
